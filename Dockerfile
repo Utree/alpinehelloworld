@@ -1,25 +1,18 @@
-#Grab the latest alpine image
-FROM alpine:latest
+#kdelfourさんのcloud9-dockerを拝借します
+FROM kdelfour/cloud9-docker
 
-# Install python and pip
-RUN apk add --no-cache --update python3 py3-pip bash
-ADD ./webapp/requirements.txt /tmp/requirements.txt
+# docker上のコンテナにcloud9をインストール
+RUN /cloud9/scripts/install-sdk.sh
 
-# Install dependencies
-RUN pip3 install --no-cache-dir -q -r /tmp/requirements.txt
+# PATHの設定 これがないとターミナルが使えない
+RUN C9_DIR=$HOME/.c9
+RUN PATH="$C9_DIR/node/bin/:$C9_DIR/node_modules/.bin:$PATH"
+RUN cd $C9_DIR
+RUN npm install pty.js
 
-# Add our code
-ADD ./webapp /opt/webapp/
-WORKDIR /opt/webapp
+# ワーキングディレクトリの設定
+RUN mkdir /cloud9/workspace
 
-# Expose is NOT supported by Heroku
-# EXPOSE 5000 		
-
-# Run the image as a non-root user
-RUN adduser -D myuser
-USER myuser
-
-# Run the app.  CMD is required to run on Heroku
-# $PORT is set by Heroku			
-CMD gunicorn --bind 0.0.0.0:$PORT wsgi 
-
+# アプリを実行します。
+# $PORT は herokuで自動的に設定されています
+CMD node server.js --port $PORT --listen 0.0.0.0 --auth name:pass -w /cloud9/workspace
